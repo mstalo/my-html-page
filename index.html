@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>Key Token Manager</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background: #f4f4f4;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+    }
+    .container {
+        background: white;
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        text-align: center;
+        width: 320px;
+    }
+    h2 {
+        margin-bottom: 20px;
+        color: #333;
+    }
+    button {
+        background: #007BFF;
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        margin: 5px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: 0.3s;
+    }
+    button:hover {
+        background: #0056b3;
+    }
+    button.delete {
+        background: #dc3545;
+    }
+    button.delete:hover {
+        background: #a71d2a;
+    }
+    button.change {
+        background: #ffc107;
+        color: black;
+    }
+    button.change:hover {
+        background: #d39e00;
+    }
+    .token-display {
+        margin-top: 15px;
+        font-weight: bold;
+        color: green;
+        background: #e6ffe6;
+        padding: 5px;
+        border-radius: 5px;
+        display: none;
+        word-break: break-all;
+    }
+    button.copy {
+    background: #28a745;
+    }
+    button.copy:hover {
+        background: #1e7e34;
+    }
+    .copy-message {
+        color: #28a745;
+        font-size: 14px;
+        display: none;
+        margin-top: 5px;
+    }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Key Token Management</h2>
+    <button onclick="addToken()">➕ Add Key Token</button>
+    <button class="delete" onclick="removeToken()">🗑 Delete Key Token</button>
+    <button class="change" onclick="changeToken()">🔄 Change Key Token</button>
+    <button class="copy" onclick="copyToken()">📋 Copy Key Token</button>
+    <div class="copy-message" id="copyMessage">✅ Token copied!</div>
+    <!-- <div class="token-display" id="tokenDisplay"></div> -->
+</div>
+
+<script>
+    let hiddenInput = null;
+
+    function generateToken(length = 25) {
+        const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+[]{}|;:,.<>?";
+        let token = "";
+        for (let i = 0; i < length; i++) {
+            token += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return token;
+    }
+
+    function addToken() {
+        if (!localStorage.getItem("keyToken")) {
+            const token = generateToken();
+            localStorage.setItem("keyToken", token);
+            createHiddenInput(token);
+            showToken();
+        } else {
+            alert("⚠ A token already exists, you can change or delete it.");
+        }
+    }
+
+    function removeToken() {
+        if (localStorage.getItem("keyToken")) {
+            localStorage.removeItem("keyToken");
+            if (hiddenInput) {
+                hiddenInput.remove();
+                hiddenInput = null;
+            }
+            document.getElementById("tokenDisplay").style.display = "none";
+        } else {
+            alert("⚠ There is no token to delete.");
+        }
+    }
+
+    function changeToken() {
+        if (localStorage.getItem("keyToken")) {
+            const newToken = generateToken();
+            localStorage.setItem("keyToken", newToken);
+            hiddenInput.value = newToken;
+            showToken();
+        } else {
+            alert("⚠ There is no token to change.");
+        }
+    }
+
+    function createHiddenInput(value) {
+        if (!hiddenInput) {
+            hiddenInput = document.createElement("input");
+            hiddenInput.type = "hidden";
+            hiddenInput.name = "keyToken";
+            document.body.appendChild(hiddenInput);
+        }
+        hiddenInput.value = value;
+    }
+
+    function showToken() {
+        const token = localStorage.getItem("keyToken");
+        if (token) {
+            document.getElementById("tokenDisplay").textContent = "🔑 Current token: " + token;
+            document.getElementById("tokenDisplay").style.display = "block";
+        }
+    }
+
+    // عند تحميل الصفحة، استرجاع التوكن إذا كان موجود
+    window.onload = function() {
+        const savedToken = localStorage.getItem("keyToken");
+        if (savedToken) {
+            createHiddenInput(savedToken);
+            showToken();
+        }
+    };
+
+    function copyToken() {
+    const token = localStorage.getItem("keyToken");
+    if (token) {
+        navigator.clipboard.writeText(token).then(() => {
+            const msg = document.getElementById("copyMessage");
+            msg.style.display = "block";
+            setTimeout(() => msg.style.display = "none", 1500);
+        });
+    } else {
+        alert("⚠ لا يوجد توكن لنسخه.");
+    }
+    }
+</script>
+
+</body>
+</html>
