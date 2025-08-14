@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Extract Links Only</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --card: #121735;
+      --muted: #9aa4ba;
+      --text: #eaf0ff;
+      --accent: #7c9cff;
+      --accent-2: #47d1b6;
+      --danger: #ff6b6b;
+      --radius: 16px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 24px; background: radial-gradient(1200px 600px at 100% -10%, #1a214a 0, transparent 60%), var(--bg);
+      color: var(--text); font-family: "Cairo", system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    }
+    h1 { font-size: 24px; margin: 0 0 8px; }
+    p { color: var(--muted); margin: 0 0 18px; }
+    .container { max-width: 980px; margin: 0 auto; }
+    .grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+    @media (min-width: 900px) {
+      .grid { grid-template-columns: 1fr 1fr; }
+    }
+    .card { background: linear-gradient(180deg, rgba(255,255,255,0.04), transparent 30%), var(--card); border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius); box-shadow: 0 10px 30px rgba(0,0,0,.3); }
+    .card header { padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.07); display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .card header h2 { font-size: 16px; margin: 0; }
+    .card .body { padding: 14px; }
+    textarea {
+      width: 100%; min-height: 280px; background: #0f1530; color: var(--text); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 12px 14px; line-height: 1.6; resize: vertical; font-size: 14px;
+      outline: none; box-shadow: inset 0 0 0 1px transparent; transition: box-shadow .2s ease, border-color .2s ease;
+    }
+    textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(124,156,255,0.2); }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+    button, .badge {
+      appearance: none; border: 0; background: var(--accent); color: #0b1020; padding: 10px 14px; border-radius: 999px; font-weight: 700; cursor: pointer; transition: transform .05s ease, filter .2s ease, opacity .2s ease;
+    }
+    button.secondary { background: #1f2756; color: var(--text); border: 1px solid rgba(255,255,255,0.1); }
+    button.ghost { background: transparent; color: var(--text); border: 1px dashed rgba(255,255,255,0.25); }
+    button:hover { filter: brightness(1.05); }
+    button:active { transform: translateY(1px); }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+    .badge { background: #0e5; color: #002; font-weight: 800; }
+    .muted { color: var(--muted); font-size: 13px; }
+    .footer { margin-top: 18px; font-size: 12px; color: var(--muted); text-align: center; }
+    .small { font-size: 12px; }
+    .hint { font-size: 13px; color: var(--muted); margin-top: 8px; }
+    .switch { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+    input[type="checkbox"] { width: 18px; height: 18px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Extract URLs Only</h1>
+    <p>Paste the text inside the right box (it may contain columns like <span class="small">cart / subscribe / cloudflare…</span> and only the links will be extracted in order.</p>
+    <div class="grid">
+      <!-- الإدخال -->
+      <section class="card">
+        <header>
+          <h2>Raw Text</h2>
+          <label class="switch"><input type="checkbox" id="dedupe" checked> Remove Duplicate</label>
+        </header>
+        <div class="body">
+          <textarea id="input" placeholder="example:\nhttps://underarmour.com                            cart            Vercel\nhttps://sportsmansoutdoorsuperstore.com            cart            cloudflare\nhttps://americanrifleman.org                       subscribe       cloudflare\nhttps://craftholsters.com                          subscribe       nginx/1.29.0\nhttps://grabagun.com                               cart            cloudflare\nhttps://pewpewtactical.com                         cart            cloudflare"></textarea>
+          <div class="actions">
+            <button id="extract">Extract links</button>
+            <button id="clear" class="secondary">Clear</button>
+            <button id="sample" class="ghost">Insert example</button>
+          </div>
+          <div class="hint">The algorithm picks up the first link in each line and ignores everything after it (spaces, tabs, extra words…).</div>
+        </div>
+      </section>
+
+      <!-- الإخراج -->
+      <section class="card">
+        <header class="row">
+          <h2>Extracted links</h2>
+          <div class="row">
+            <span id="count" class="badge">0 Link</span>
+            <button id="copy" class="secondary">Copy</button>
+            <button id="download" class="secondary">Download .txt</button>
+          </div>
+        </header>
+        <div class="body">
+          <textarea id="output" placeholder="The links will appear here..." readonly></textarea>
+          <div class="hint">The order of appearance is maintained. When duplicate deletion is enabled, only the first appearance of each link will be kept.</div>
+        </div>
+      </section>
+    </div>
+
+    <div class="footer">Designed with a simple interface for working with text containing columns separated by spaces/tabs.</div>
+  </div>
+
+  <script>
+    const $ = (s) => document.querySelector(s);
+    const input = $('#input');
+    const output = $('#output');
+    const countBadge = $('#count');
+    const extractBtn = $('#extract');
+    const copyBtn = $('#copy');
+    const clearBtn = $('#clear');
+    const sampleBtn = $('#sample');
+    const downloadBtn = $('#download');
+    const dedupeChk = $('#dedupe');
+
+    function extractUrls(text, { dedupe = true } = {}) {
+      const lines = (text || '').split(/\r?\n/);
+      const seen = new Set();
+      const results = [];
+
+      for (let rawLine of lines) {
+        const line = rawLine.trim();
+        if (!line) continue;
+        // التقط أول عنوان يبدأ بـ http/https حتى أول فراغ (بدون الرموز النهائية الشائعة)
+        const match = line.match(/https?:\/\/\S+/i);
+        if (match) {
+          let url = match[0]
+            .replace(/[\]\),;\u061B\u060C]+$/u, '') // إزالة بعض العلامات النهائية المحتملة
+            .trim();
+          if (!dedupe || !seen.has(url)) {
+            results.push(url);
+            seen.add(url);
+          }
+        }
+      }
+      return results;
+    }
+
+    function updateOutput(urls) {
+      output.value = urls.join('\n');
+      countBadge.textContent = `${urls.length} ${urls.length === 1 ? 'رابط' : 'روابط'}`;
+    }
+
+    extractBtn.addEventListener('click', () => {
+      const urls = extractUrls(input.value, { dedupe: dedupeChk.checked });
+      updateOutput(urls);
+    });
+
+    copyBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(output.value);
+        flash(copyBtn, 'تم النسخ!');
+      } catch (e) {
+        alert('لم يتمكن المتصفح من النسخ تلقائيًا. انسخ يدويًا.');
+      }
+    });
+
+    clearBtn.addEventListener('click', () => {
+      input.value = '';
+      output.value = '';
+      updateOutput([]);
+    });
+
+    sampleBtn.addEventListener('click', () => {
+      input.value = `https://underarmour.com                            cart            Vercel\nhttps://sportsmansoutdoorsuperstore.com            cart            cloudflare\nhttps://americanrifleman.org                       subscribe       cloudflare\nhttps://craftholsters.com                          subscribe       nginx/1.29.0\nhttps://grabagun.com                               cart            cloudflare\nhttps://pewpewtactical.com                         cart            cloudflare`;
+      const urls = extractUrls(input.value, { dedupe: dedupeChk.checked });
+      updateOutput(urls);
+    });
+
+    downloadBtn.addEventListener('click', () => {
+      const blob = new Blob([output.value], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'urls.txt';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    });
+
+    function flash(el, text) {
+      const old = el.textContent;
+      el.textContent = text;
+      el.disabled = true;
+      setTimeout(() => { el.textContent = old; el.disabled = false; }, 900);
+    }
+  </script>
+</body>
+</html>
+
